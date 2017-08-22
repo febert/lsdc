@@ -74,6 +74,8 @@ class Prediction_Model(object):
         self.states = states
         self.gen_pix_distrib = []
 
+        self.flow_vectors = []
+
     def build(self):
 
         if 'dna_size' in self.conf.keys():
@@ -232,7 +234,12 @@ class Prediction_Model(object):
                         enc6, color_channels, 1, stride=1, scope='convt4')
                     # This allows the network to also generate one image from scratch,
                     # which is useful when regions of the image become unoccluded.
-                    transformed = [tf.nn.sigmoid(enc7)]
+
+                    if 'no_gen_pix' not in self.conf:
+                        transformed = [tf.nn.sigmoid(enc7)]
+                    else:
+                        print 'pixel generation disabled!'
+                        transformed = []
 
                 if self.stp:
                     stp_input0 = tf.reshape(hidden5, [int(batch_size), -1])
@@ -253,18 +260,16 @@ class Prediction_Model(object):
                 elif self.cdna:
                     cdna_input = tf.reshape(hidden5, [int(batch_size), -1])
 
-                    new_transformed = self.cdna_transformation(prev_image,
+                    new_transformed, cdna_kerns = self.cdna_transformation(prev_image,
                                                                     cdna_input,
                                                                     reuse_sc= reuse)
+
                     transformed += new_transformed
                     self.moved_parts.append(transformed)
-
-
                     if self.pix_distribution != None:
-                        transf_distrib = self.cdna_transformation(prev_pix_distrib,
+                        transf_distrib, _ = self.cdna_transformation(prev_pix_distrib,
                                                                     cdna_input,
                                                                    reuse_sc= True)
-
 
                 elif self.dna:
                     # Only one mask is supported (more should be unnecessary).
@@ -296,6 +301,16 @@ class Prediction_Model(object):
 
                     self.gen_pix_distrib.append(pix_distrib_output)
 
+                if 'visual_flowvec' in self.conf:
+                    motion_vecs = self.compute_motion_vector(cdna_kerns)
+                    output = tf.zeros([self.conf['batch_size'],64,64,2])
+                    for vec, mask in zip(motion_vecs, mask_list[1:]):
+                        vec = tf.reshape(vec, [32, 1, 1, 2])
+                        vec = tf.tile(vec, [1, 64,64, 1])
+                        output += vec * mask
+
+                    self.flow_vectors.append(output)
+
                 current_state = slim.layers.fully_connected(
                     state_action,
                     int(current_state.get_shape()[1]),
@@ -316,8 +331,32 @@ class Prediction_Model(object):
 
         return sum
 
+    def compute_motion_vector(self, cdna_kerns):
 
-## Utility functions
+        range = self.conf['kern_size'] / 2
+        dc = np.linspace(-range, range, num= self.conf['kern_size'])
+        dc = np.expand_dims(dc, axis=0)
+        dc = np.repeat(dc, self.conf['kern_size'], axis=0)
+        dr = np.transpose(dc)
+        dr = tf.constant(dr, dtype=tf.float32)
+        dc = tf.constant(dc, dtype=tf.float32)
+
+        cdna_kerns = tf.transpose(cdna_kerns, [2, 3, 0, 1])
+        cdna_kerns = tf.split(cdna_kerns, self.conf['num_masks'], axis=1)
+        cdna_kerns = [tf.squeeze(k) for k in cdna_kerns]
+
+        vecs = []
+        for kern in cdna_kerns:
+            vec_r = tf.multiply(dr, kern)
+            vec_r = tf.reduce_sum(vec_r, axis=[1,2])
+            vec_c = tf.multiply(dc, kern)
+            vec_c = tf.reduce_sum(vec_c, axis=[1, 2])
+
+            vecs.append(tf.stack([vec_r,vec_c], axis=1))
+        return vecs
+
+
+    ## Utility functions
     def stp_transformation(self,prev_image, stp_input, num_masks, reuse= None):
         """Apply spatial transformer predictor (STP) to previous image.
 
@@ -392,7 +431,7 @@ class Prediction_Model(object):
         transformed = tf.transpose(transformed, [3, 1, 2, 0, 4])
         transformed = tf.unstack(value=transformed, axis=-1)
 
-        return transformed
+        return transformed, cdna_kerns
 
     def dna_transformation(self, prev_image, dna_input, DNA_KERN_SIZE):
         """Apply dynamic neural advection to previous image.

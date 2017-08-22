@@ -34,5 +34,6 @@ configuration = {
 'single_view':"",
 'use_len':14,                # number of steps used for training where the starting location is selected randomly within sequencelength
 'provide_gtruth':'',
+'no_gen_pix':'',
 'visual_flowvec':''
 }

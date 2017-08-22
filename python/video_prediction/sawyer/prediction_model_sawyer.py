@@ -374,7 +374,6 @@ def construct_model(images,
 
                     gen_pix_distrib2.append(pix_distrib_output)
 
-
             if current_state != None:
                 current_state = slim.layers.fully_connected(
                     state_action,

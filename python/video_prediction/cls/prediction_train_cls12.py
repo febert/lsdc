@@ -228,11 +228,12 @@ def main(unused_argv, conf_script= None):
                      val_model.iter_num: 0 }
         file_path = conf['output_dir']
 
-        ground_truth, gen_images, gen_masks, gen_pix_distrib, moved_parts = sess.run([val_images,
+        ground_truth, gen_images, gen_masks, gen_pix_distrib, moved_parts, flow_vectors = sess.run([val_images,
                                                         val_model.m.gen_images,
                                                         val_model.m.gen_masks,
                                                         val_model.m.gen_pix_distrib,
-                                                        val_model.m.moved_parts
+                                                        val_model.m.moved_parts,
+                                                        val_model.m.flow_vectors
                                                             ],
                                                            feed_dict)
 
@@ -242,6 +243,8 @@ def main(unused_argv, conf_script= None):
         dict['gen_masks'] = gen_masks
         dict['gen_pix_distrib'] = gen_pix_distrib
         dict['moved_parts'] = moved_parts
+        dict['flow_vectors'] = flow_vectors
+
         cPickle.dump(dict, open(file_path + '/pred.pkl','wb'))
         print 'written files to:' + file_path
 

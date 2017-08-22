@@ -13,7 +13,6 @@ import argparse
 import threading
 import time
 
-import h5py
 
 # Add lsdc/python to path so that imports work.
 sys.path.append('/'.join(str.split(__file__, '/')[:-2]))
