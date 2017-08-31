@@ -61,7 +61,7 @@ def visualize_flow(dict_):
         for b in range(bsize):
             for r in range(64):
                 for c in range(64):
-                    color_flow[t][b, r, c] = colorsys.hsv_to_rgb((flow_angle[t][b, r, c] +np.pi) / 2 / np.pi,
+                    color_flow[t][b, r, c] = checked_hsv((flow_angle[t][b, r, c] +np.pi) / 2 / np.pi,
                                                               norm_magnitudes[t][b, r, c],
                                                               1.)
     pdb.set_trace()

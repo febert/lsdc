@@ -1,5 +1,6 @@
 import cPickle
-import numpy
+import numpy as np
+import re
 from video_prediction.utils_vpred.create_gif import *
 from PIL import Image
 from matplotlib import pyplot as plt
@@ -55,10 +56,18 @@ def comp_gif(conf, file_path, name= "", examples = 10, show_parts=False):
     moved_images = dict_['moved_imagesl']
     moved_images = prepare_video(moved_images, copy_last_dim=False)
     videolist += moved_images
+    print 'adding moved images'
 
     comp_masks_l = dict_['comp_masks_l']
     comp_masks_l = prepare_video(comp_masks_l, copy_last_dim=True)
     videolist += comp_masks_l
+    print 'adding masks'
+
+    if 'moved_parts_l' in dict_:
+        moved_parts_l = dict_['moved_parts_l']
+        moved_parts_l = prepare_video(moved_parts_l, copy_last_dim=False)
+        videolist += moved_parts_l
+        print 'adding moved_parts_l'
 
     if 'accum_Images_l' in dict_:
         accum_Images_l = dict_['accum_Images_l']
@@ -80,6 +89,9 @@ def comp_gif(conf, file_path, name= "", examples = 10, show_parts=False):
         accum_Images_l = prepare_video(accum_Images_l, copy_last_dim=False)
         videolist += accum_Images_l
         print 'adding accum_Images_l'
+
+    print 'number of videos', len(videolist)
+    pdb.set_trace()
 
     fused_gif = assemble_gif(videolist, num_exp=examples)
 
@@ -155,7 +167,7 @@ if __name__ == '__main__':
     hyperparams = imp.load_source('hyperparams', file_path +'/conf.py')
 
     conf = hyperparams.configuration
-    conf['visualize'] = conf['output_dir'] + '/model42002'
+    conf['visualize'] = conf['output_dir'] + '/model36002'
 
 
     comp_gif(conf, file_path + '/modeldata', show_parts=True)

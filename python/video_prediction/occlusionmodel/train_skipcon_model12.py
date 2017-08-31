@@ -15,6 +15,7 @@ from tensorflow.python.platform import flags
 import video_prediction.utils_vpred.create_gif
 
 
+from skipcon_window_model import Skipcon_Window as Occlusionmodel
 from video_prediction.utils_vpred.skip_example import skip_example
 
 import makegifs_skipcon
@@ -74,7 +75,7 @@ class Model(object):
                  pix_distrib=None
                  ):
 
-        from skipcon_window_model import Skipcon_Window as Occlusionmodel
+
 
         # self.prefix = prefix = tf.placeholder(tf.string, [])
         self.iter_num = tf.placeholder(tf.float32, [])
@@ -209,6 +210,7 @@ def main(unused_argv, conf_script= None):
         print 'creating visualizations ...'
         conf = adapt_params_visualize(conf, FLAGS.visualize)
         conf['sequence_length'] = conf['use_len']
+        conf['batch_size'] = 5
 
     print '-------------------------------------------------------------------'
     print 'verify current settings!! '
@@ -254,13 +256,14 @@ def main(unused_argv, conf_script= None):
             feed_dict = {val_model.lr: 0.0,
                          val_model.iter_num: 0}
 
-            ground_truth, gen_images, moved_imagesl, comp_masks_l, accum_Images_l, accum_masks_l = sess.run([
+            ground_truth, gen_images, moved_imagesl, comp_masks_l, accum_Images_l, accum_masks_l, moved_parts_l = sess.run([
                                                             val_images,
                                                             val_model.om.gen_images,
                                                             val_model.om.moved_imagesl,
                                                             val_model.om.comp_masks_l,
                                                             val_model.om.accum_Images_l,
-                                                            val_model.om.accum_masks_l
+                                                            val_model.om.accum_masks_l,
+                                                            val_model.om.moved_parts_l,
                                                             ],
                                                             feed_dict)
             dict_ = {}
@@ -268,6 +271,9 @@ def main(unused_argv, conf_script= None):
             dict_['gen_images'] = gen_images
             dict_['moved_imagesl'] = moved_imagesl
             dict_['comp_masks_l'] = comp_masks_l
+
+
+
             if 'no_maintainence' not in conf:
                 dict_['accum_Images_l'] = accum_Images_l
                 dict_['accum_masks_l'] = accum_masks_l
@@ -431,20 +437,25 @@ class Diffmotion_model(Model):
         actions[b, 1] = np.array([0, 0, 0, 4])
         feed_dict[self.actions_pl] = actions
 
-        gen_images, moved_imagesl, comp_masks_l, accum_Images_l, accum_masks_l,accum_pix_distrib_l, gen_pix_distrib  = sess.run([
+        gen_images, moved_imagesl, comp_masks_l, accum_Images_l, accum_masks_l,accum_pix_distrib_l, gen_pix_distrib, moved_parts_l  = sess.run([
             self.om.gen_images,
             self.om.moved_imagesl,
             self.om.comp_masks_l,
             self.om.accum_Images_l,
             self.om.accum_masks_l,
             self.om.accum_pix_distrib_l,
-            self.om.gen_pix_distrib
+            self.om.gen_pix_distrib,
+            self.om.moved_parts_l
         ],
             feed_dict)
         dict_ = {}
         dict_['gen_images'] = gen_images
         dict_['moved_imagesl'] = moved_imagesl
         dict_['comp_masks_l'] = comp_masks_l
+
+        if 'show_moved_parts' in self.conf:
+            dict_['moved_parts_l'] = moved_parts_l
+
         if 'no_maintainence' not in self.conf:
             dict_['accum_Images_l'] = accum_Images_l
             dict_['accum_masks_l'] = accum_masks_l

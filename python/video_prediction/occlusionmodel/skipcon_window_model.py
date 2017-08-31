@@ -98,6 +98,7 @@ class Skipcon_Window(object):
         self.generation_masks = []
         self.current_state = states[0]
         self.gen_pix_distrib = []
+        self.moved_parts_l = []
 
     def build(self):
 
@@ -301,8 +302,11 @@ class Skipcon_Window(object):
                     for mimage, mask in zip_equal(context_img, comp_masks[:self.conf['use_len']]):
                         assembly += mimage * mask
 
+                    moved_parts = []
                     for mimage, mask in zip_equal(self.moved_imagesl[-1], comp_masks[self.conf['use_len']:]):
                         assembly += mimage * mask
+                        moved_parts.append(mimage*mask)
+                    self.moved_parts_l.append(moved_parts)
 
                     if self.pix_distribution != None:
                         if t < self.ncontext:
